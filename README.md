@@ -105,6 +105,6 @@ Formulas for function calculations:
 </p>
 
 # Docs
-Generated basic htlm docs with `pdoc` using docsstrings and placed under the `docs` folder.
+Generated basic htlm docs with `pdoc` using docsstrings and placed under the `docs` folder (not including private methods because `pdoc` doesn't consider it as best practice).
 
 
