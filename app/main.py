@@ -89,6 +89,16 @@ class CoinbaseOrderBookClient:
             logger.addHandler(handler_file)
         return logger
 
+    def _write_to_output_file(self, message: dict):
+        """Write a message to the output file in DATA_STORE mode."""
+        if os.getenv("DATA_STORE", "False").lower() == "true" and self.output_file:
+            try:
+                with open(self.output_file, "a") as file:
+                    json.dump(message, file)
+                    file.write("\n")
+            except Exception as e:
+                self.logger.error(f"Failed to write message to file: {e}")
+
     def create_subscription_message(self) -> Dict[str, Any]:
         """
         Create a subscription message for the Coinbase WebSocket.
@@ -103,33 +113,132 @@ class CoinbaseOrderBookClient:
             ]
         }
 
+    def _subscriptions_check(self, message) -> None:
+        channels = message.get("channels")
+        if not isinstance(channels, list):
+            raise ValueError(f"{self.product_id}: 'channels' is not a list")
+
+        for channel in channels:
+            if not isinstance(channel, dict):
+                raise ValueError(f"{self.product_id}: Invalid channel format")
+
+            channel_name = channel.get("name")
+            product_ids = channel.get("product_ids")
+
+            if not isinstance(channel_name, str):
+                raise ValueError(f"{self.product_id}: 'name' is missing or not a string in channel")
+
+            if not isinstance(product_ids, list):
+                raise ValueError(f"{self.product_id}: 'product_ids' is missing or not a list in channel")
+
+            if not product_ids:
+                raise ValueError(f"{self.product_id}: 'product_ids' is empty in channel")
+
+            if PRODUCT_ID not in product_ids:
+                raise ValueError(f"{self.product_id}: '{PRODUCT_ID}' is not in 'product_ids' list")
+
+            if len(product_ids) > 1:
+                raise ValueError(f"{self.product_id}: Trying to subscribe to too many product_ids. Only one product is allowed.")
+
+
+    def _snapshot_check(self, message):
+    # Check if 'product_id' is a string
+        
+        product_id = message.get("product_id")
+        if not product_id:
+            raise ValueError(f"{self.product_id}: 'product_id' is empty")
+
+        if not isinstance(product_id, str):
+            raise ValueError("'product_id' should be a string")
+
+        if PRODUCT_ID != product_id:
+            raise ValueError(f"{self.product_id}: '{PRODUCT_ID}' shoud be equal")
+
+        # Check if 'bids' is a list and not empty
+        bids = message.get("bids")
+        if not isinstance(bids, list):
+            raise ValueError("'bids' should be a list")
+        if not bids:
+            raise ValueError("'bids' should not be empty")
+        for bid in bids:
+            if not isinstance(bid, list) or len(bid) != 2:
+                raise ValueError("Each bid should be a list of two elements (price, amount)")
+
+        # Check if 'asks' is a list and not empty
+        asks = message.get("asks")
+        if not isinstance(asks, list):
+            raise ValueError("'asks' should be a list")
+        if not asks:
+            raise ValueError("'asks' should not be empty")
+        for ask in asks:
+            if not isinstance(ask, list) or len(ask) != 2:
+                raise ValueError("Each ask should be a list of two elements (price, amount)")
+
+
+    def _update_check(self, message):
+        product_id = message.get("product_id")
+        if not product_id:
+            raise ValueError(f"{self.product_id}: 'product_id' is empty")
+
+        if not isinstance(product_id, str):
+            raise ValueError("'product_id' should be a string")
+
+        if PRODUCT_ID != product_id:
+            raise ValueError(f"{self.product_id}: '{PRODUCT_ID}' shoud be equal")
+
+        # Check if 'changes' is a list and not empty
+        changes = message.get("changes")
+        if not isinstance(changes, list):
+            raise ValueError("'changes' should be a list")
+        if not changes:
+            raise ValueError("'changes' should not be empty")
+        
+        # Check if each change is a list with three elements (side, price, amount)
+        for change in changes:
+            if not isinstance(change, list) or len(change) != 3:
+                raise ValueError("Each change should be a list of three elements (side, price, amount)")
+            # Check if side is either 'buy' or 'sell'
+            side = change[0].lower()
+            if side not in ["buy", "sell"]:
+                raise ValueError("Side must be either 'buy' or 'sell'")            
+                             
+
     async def process_message(self, message: Dict[str, Any]) -> None:
-        """
-        Process incoming messages from the WebSocket.
-        """
+        """Processing the message with basic validation"""
+
         message_type = message.get("type")
+        self._write_to_output_file(message)
 
-        # Dump raw data only in DATA_STORE mode
-        if os.getenv("DATA_STORE", "False").lower() == "true" and self.output_file:
-            with open(self.output_file, "a") as file:
-                json.dump(message, file)
-                file.write("\n")
+        try:
+            if message_type == "subscriptions":
+                self.logger.info(f"{self.product_id}: Subscriptions ack received")
+                self._subscriptions_check(message)
 
-        if message_type == "snapshot":
-            self.logger.info(f"{self.product_id}: Snapshot received")
-            self.bids = {price: size for price, size in message.get("bids", [])}
-            self.asks = {price: size for price, size in message.get("asks", [])}
-            self._calculations()
-        elif message_type == "l2update":
-            self.logger.info(f"{self.product_id}: L2 update received")
-            changes = message.get("changes", [])
-            for change in changes:
-                side, price, size = change
-                if side == "buy":
-                    self.bids[price] = size
-                elif side == "sell":
-                    self.asks[price] = size
-            self._calculations()
+            elif message_type == "snapshot":                
+                self.logger.info(f"{self.product_id}: Snapshot received")
+                self._snapshot_check(message)
+                self.bids = {price: size for price, size in message.get("bids", [])}
+                self.asks = {price: size for price, size in message.get("asks", [])}
+                self._calculations()
+
+            elif message_type == "l2update":
+                self.logger.info(f"{self.product_id}: L2 update received")
+                changes = message.get("changes", [])
+                for change in changes:
+                    side, price, size = change
+                    if side == "buy":
+                        self.bids[price] = size
+                    elif side == "sell":
+                        self.asks[price] = size
+                self._calculations()
+
+        except ValueError as e:
+            self.logger.error(f"Invalid subscription message: {message}, Error: {str(e)}")
+            raise
+        except Exception as e:
+            self.logger.error(f"Error handling connection: {e}")
+            raise
+
 
     def _calculations(self) -> None:
         """

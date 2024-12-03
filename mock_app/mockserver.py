@@ -86,11 +86,11 @@ class MockServer:
 
     async def generate_subscribe_ack(self, product_id):
         # We emulate the protocol's disucssion with this subscribe_ack
-        channels = {
+        channels = [{
             "name": "level2_50", 
             "product_ids": [product_id], 
             "account_ids": None
-        }
+        }]
 
         subscribe_ack = {
             "type": "subscriptions",
