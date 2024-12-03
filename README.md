@@ -117,7 +117,7 @@ I would consider either AWS or GCP services to make the implementation in a publ
 ## Bottleneck of the client design
 I subscribed to the `level2_50` channel and its snapshot can grow large. My experiments showed choosing an `8 Mb` (websocket) payload is a good approach, better payload numbers can be looked up from the manual. The frequency can be also ms based, so a streaming approach would be beneficial. Other Coinbase channels might need even larger payload size (i.e. `level2` by providing more in-depth details), so we need to be cautious on what data we actually need and which channel can supply us.
 
-Caveat: I have already built similar architecture in both GCP & AWS. 
+Caveat: I have already built similar architecture in both GCP & AWS. I'll take a closer look on GCP services this time.
 ## Architecture in detail
 <p align="center">
   <img src="https://github.com/user-attachments/assets/56f70ff9-072a-4e22-bfb0-a2d1ab34c5da">
