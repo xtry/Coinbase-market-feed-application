@@ -39,9 +39,13 @@ For connecting the real data feeds I used `wss` secure protocol, whereas for the
 * mock_data/`PRODUCT_ID`: stores the raw data of the mock server instances
 * mock_logs/`PRODUCT_ID`: stores the console output for keeping the history of the mock server instances
 * can be cleaned up with the `cleanup.sh` bash script
+* the console output looks like as the picture below
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/283dd686-696d-4d8e-ab72-190e16e87909" alt="console">
+</p>
 
 # Docs
-
+Generated basic htlm docs with `pdoc` using docsstrings and placed under the `docs` folder.
 
 
 # communication
