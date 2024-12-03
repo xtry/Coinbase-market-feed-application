@@ -65,7 +65,33 @@ For connecting the real data feeds I used `wss` secure protocol, whereas for the
 {"type": "l2update", "product_id": "BTC-USD", "changes": [["buy", "37479.69", "1.96"], ["buy", "46082.75", "2.63"], ["sell", "39954.43", "4.64"], ["sell", "44771.54", "4.01"], ["sell", "42235.47", "3.8"], ["sell", "34902.74", "1.23"], ["buy", "44208.14", "3.66"], ["sell", "37822.86", "2.17"], ["sell", "37915.98", "3.01"], ["buy", "41022.14", "0.9"], ["sell", "41427.26", "2.24"], ["sell", "36398.81", "1.01"], ["sell", "46306.47", "2.95"], ["sell", "37098.76", "1.11"], ["sell", "39400.29", "0.15"], ["buy", "44415.66", "2.84"], ["buy", "49660.5", "1.96"], ["buy", "36068.34", "2.49"], ["sell", "37626.05", "2.14"], ["buy", "31660.58", "4.37"], ["buy", "39002.4", "1.21"], ["buy", "34716.39", "1.23"], ["sell", "43605.66", "2.39"], ["buy", "39517.63", "2.04"], ["sell", "42918.41", "4.17"], ["buy", "34047.44", "2.46"], ["buy", "36582.25", "1.43"], ["buy", "40034.08", "1.54"], ["buy", "42185.57", "4.84"], ["sell", "40268.0", "3.99"], ["sell", "38717.56", "2.9"], ["sell", "44723.61", "1.37"], ["buy", "40253.62", "1.58"], ["sell", "38356.86", "2.03"], ["sell", "35455.77", "3.71"], ["sell", "47269.79", "4.15"], ["buy", "31340.22", "2.36"], ["sell", "47500.5", "4.53"], ["sell", "38235.93", "3.44"], ["buy", "44835.57", "0.94"], ["buy", "44062.94", "2.76"], ["buy", "41453.67", "3.11"], ["buy", "49040.94", "3.47"], ["sell", "45801.1", "4.05"], ["sell", "33907.35", "2.0"], ["sell", "45626.49", "1.16"], ["sell", "44290.5", "4.41"], ["buy", "30908.2", "3.59"], ["sell", "34122.6", "0.4"], ["sell", "34938.25", "3.7"]]}
 ```
 
-# Corner cases
+# Error handling, Robustness, Corner Cases
+For error handling:
+* client application:
+  * I use exponential backoff (devops standard procedure) for all communications in the client application
+    * I inform the user of the subscription and message exchanges were successful or not and do retry in case of failure
+* both applications:
+  * Connection/error handling
+  * File handling/error when writing to file (application history/raw data)
+  * Value/JSON handling/error when checking and then converting the received data
+
+For robustness:
+* I use OOP approach
+* Python software engineering best practices: async calls, private function visibilities, type hints
+* I do validation at both server and client sides:
+  * server:
+    * _check and validate_ the `subsctiption` message that is received from the client (while building up the connection)
+  * client:
+    * _check and validate_ the `subscriptions` message that is received as ack from the mock server
+    * _check and validate_ the `snapshot` message that is received as ack from the mock server
+    * _check and validate_ the `update` message that is received as ack from the mock server
+* I use both `info` and `debug` messages
+
+Formulas for function calculations:
+* `highest_bid = max(bids)` and `lowest_ask = min(asks)`
+* `moving_avg = sum(mid_price_history) / len(mid_price_history)` -- in the history I keep _the last 10 prices_ only
+* `spread = lowest_ask_price - highest_bid_price`
+* `max_spread = max(max_spread, abs(spread))` -- so that I account both positive and negative spreads (by taking the abs())
 
 # Logs
 * data/`PRODUCT_ID`: stores the raw data of the client instances
