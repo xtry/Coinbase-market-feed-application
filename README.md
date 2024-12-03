@@ -78,7 +78,7 @@ For error handling:
 For robustness:
 * I use OOP approach
 * Python software engineering best practices: async calls, private function visibilities, type hints
-* I do validation at both server and client sides:
+* I do validation at both server and client sides. Generally I can state, if the data is incomplete, has empty or non-meaningful values to convert (i.e. to float) then the application throws an error and halts (strict approach). Despite this configuration, I'm able to receive continuous valid data stream from both the `real data feed` and from the `mock data feed` too.
   * server:
     * _check and validate_ the `subsctiption` message that is received from the client (while building up the connection)
   * client:
