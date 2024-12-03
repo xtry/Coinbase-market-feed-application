@@ -1,4 +1,47 @@
-# kahoot
+# Introduction
+I investigated the Coinbase market feeds, and found that it offeres multiple channels with various details of market data. 
+
+I choose to implement the `level2_50` channel for practical reasons:
+* Gives complete `snapshot` of the order book
+* Promotes efficient bandwidth use: is a compact representation of the `order book` and shows the top 50 `bids` and `asks` at each updates
+  * Updates are continuous stream that follow the `snapshot`
+* Focuses on relevant data by looking on the `highest bids` and `lowests asks`
+  * These are closest to the mid-price which are the most interesting for trading
+  * We can fit analytics: i.e. `max spread`, `moving averages` and other most important indicators
+* Performance: this is computationally/storage-wise more optimal, other than processing the entire `order book` at each updates
+* It's also easier to mock and make tests with the limitation of `level 50`
+
+Caveat: I also considered `level2_batch`, which should 1:1 representation of `level2_50` however it is not online at the moment. `Level2_batch` can appealing as it also offers the every 5 seconds updates, which would be good enough to be analogous to the mock's expectations. Therefore, I decided to go ahead with `level2_50` for this case study.
+
+# Build up of the application
+I design the application in mind of portability and extensibility. I wanted to make sure that my client:
+* Can connect both to the real data feed from Coinbase and also to my mock one
+* Can process different `product_id`s in separate instances. This means `btc client` can connect to the `mock server btc` mock server only, I designed this way for simplicity.
+  * the `product_id`s are `BTC`, `ETH` and `LTC`.
+* therefore i.e. the `BTC` client can connect either the `real data feed btc`, or the `mock data feed btc` as the picture shows below
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/9c403be3-9ab9-4cde-986b-fd41d3247e72" alt="arch drawio">
+</p>
+
+# Communication protocol
+For connecting the real data feeds I used `wss` secure protocol, whereas for the mock data feeds I used `ws` for simplicity (and also considering the fact it is used local tests only). Experimenting wit the protocol communication in the real data feed, we can state the following _oversimplified_ flow:
+1. The client establish a connection to the host and send `subscribe` message
+2. Once the server accepts, it responds with a `subscriptions` message most probably giving a status update & confirmation
+3. The server sends a `snapshot` of the `order book`. The real data feed will send over the complete `order book` (most likely fitting to a 8 Mb payload), the mock data feed will send over a payload with the cap of 50 pairs. 
+5. The server sends `l2update` containing the updates only. The real data feed will send up till 50 updates of pairs, the mock data feed sends an update of exactly 50 pairs 
+
+# Corner cases
+
+# Logs
+* data/`PRODUCT_ID`: stores the raw data of the client instances
+* logs/`PRODUCT_ID`: stores the console output for keeping the history of the client instances
+* mock_data/`PRODUCT_ID`: stores the raw data of the mock server instances
+* mock_logs/`PRODUCT_ID`: stores the console output for keeping the history of the mock server instances
+* can be cleaned up with the `cleanup.sh` bash script
+
+# Docs
+
 
 
 # communication
