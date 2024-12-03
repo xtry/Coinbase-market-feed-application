@@ -107,4 +107,25 @@ Formulas for function calculations:
 # Docs
 Generated basic htlm docs with `pdoc` using docsstrings and placed under the `docs` folder (not including private methods because `pdoc` doesn't consider it as best practice).
 
+# Deployments and tests
+CI/CD based deployments and automation tests such as unit tests, integrations can be provided upon request. I did not have time to provide due to my limited capacity.
+* I did manual tests for the connection establishment for both server and client sides, which are reflected in the check and validation functions
+
+# Further development (Part 2)
+I would consider either AWS or GCP services to make the implementation in a public cloud. I sketched a GCP based solution that uses PubSub, Kubernetes and BigQuery. Some of the benefits using a cloud-based solution are ease of usage, scalability, high availability and low-maintenance. I represent only the client here as I don't see much reason why to move the mock to the cloud. The cloud services also provide a local development opportunity, providing mocking opporutnities.
+
+## Bottleneck of the client design
+I subscribed to the `level2_50` channel and its snapshot can grow large. My experiments showed choosing an 8 Mb (websocket) payload is a good approach, better payload numbers can be looked up from the manual. The frequency can be also ms based, so a streaming approach would be beneficial. Other Coinbase channels might need even larger payload size (i.e. level2 by providing more in-depth details), so we need to be cautious on what data we actually need and which channel can supply us.
+
+* PubSub: highly customizable streaming service, capable of handlig sub-ms requests and scale as a managed service.
+
+Caveat: I have already built similar architecture in both GCP & AWS. 
+## Architecture
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/56f70ff9-072a-4e22-bfb0-a2d1ab34c5da">
+</p>
+
+
+
+
 
