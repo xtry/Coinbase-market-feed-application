@@ -115,17 +115,36 @@ CI/CD based deployments and automation tests such as unit tests, integrations ca
 I would consider either AWS or GCP services to make the implementation in a public cloud. I sketched a GCP based solution that uses PubSub, Kubernetes and BigQuery. Some of the benefits using a cloud-based solution are ease of usage, scalability, high availability and low-maintenance. I represent only the client here as I don't see much reason why to move the mock to the cloud. The cloud services also provide a local development opportunity, providing mocking opporutnities.
 
 ## Bottleneck of the client design
-I subscribed to the `level2_50` channel and its snapshot can grow large. My experiments showed choosing an 8 Mb (websocket) payload is a good approach, better payload numbers can be looked up from the manual. The frequency can be also ms based, so a streaming approach would be beneficial. Other Coinbase channels might need even larger payload size (i.e. level2 by providing more in-depth details), so we need to be cautious on what data we actually need and which channel can supply us.
-
-* PubSub: highly customizable streaming service, capable of handlig sub-ms requests and scale as a managed service.
+I subscribed to the `level2_50` channel and its snapshot can grow large. My experiments showed choosing an `8 Mb` (websocket) payload is a good approach, better payload numbers can be looked up from the manual. The frequency can be also ms based, so a streaming approach would be beneficial. Other Coinbase channels might need even larger payload size (i.e. `level2` by providing more in-depth details), so we need to be cautious on what data we actually need and which channel can supply us.
 
 Caveat: I have already built similar architecture in both GCP & AWS. 
-## Architecture
+## Architecture in detail
 <p align="center">
   <img src="https://github.com/user-attachments/assets/56f70ff9-072a-4e22-bfb0-a2d1ab34c5da">
 </p>
 
+* PubSub: is a highly customizable, managed streaming service designed to handle sub-millisecond message processing at scale. **One of the biggest take on is that it supports message payloads up to `10 MB`, which should suffice for our CoinBase data needs**. Many other cloud stream services might not support such a big payload. If the `10 Mbs` were still not sufficient enough, we can still implement manual partitioning and/or also compression to fit larger messages. **Also comes with built-in fault tolerance features, such as message acknowledgment and automatic retries, ensures reliable message delivery even in case of failures**. Its built-in dead-letter queue with a 7-day retention period ensures failed messages can be retried or analyzed, adding reliability to the pipeline. Additionally, Pub/Sub can directly stream data to BigQuery, simplifying the architecture, reducing costs and preventing potential integration issues. 
 
+Sample snippet:
+```python
+from google.cloud import pubsub_v1
+import websocket
+import json
 
+project_id = "your-project-id"
+topic_id = "coinbase-level2-50"
+publisher = pubsub_v1.PublisherClient()
+topic_path = publisher.topic_path(project_id, topic_id)
 
+def on_message(ws, message):
+    publisher.publish(topic_path, message.encode('utf-8'))
 
+ws = websocket.WebSocketApp(
+    "wss://ws-feed.exchange.coinbase.com",
+    on_message=on_message
+)
+ws.run_forever()
+
+```
+* Kubernetes: is a powerful, open-source platform for automating the deployment, scaling, and management of containerized applications. **Its biggest advantage for us that it allows each (docker) instance of this application to be deployed seamlessly to a pod, with built-in load balancing ensuring efficient traffic distribution**. K8s can automatically scale your application by launching new pods in response to high CPU or memory utilization, ensuring optimal performance and resource utilization at scale. It can also scale down according to the current needs.
+* BigQuery: is a fully managed, serverless data warehouse that supports efficient and scalable analytics. It stores data in highly optimized columnar formats like ORC and Parquet, which reduce storage costs and improve query performance. BigQuery also supports standard SQL for querying, making it easy to analyze large datasets. Its seamless integration with Google Cloud services, like Pub/Sub, allows for easy ingestion and real-time analytics. BigQuery supports timetraveling (by default 7 days) and snapshots, making it possible to revisit table data from the past if needed. **The biggest take on it offers is the simple integration with PubSub and the fact is a fast, efficient and managed service reducing manual maintenance works at scale**.
