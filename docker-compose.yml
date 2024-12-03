@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  # Main application for BTC-USD
+  btc_ws_client:
+    build:
+      context: ./app  # Main app folder
+    container_name: btc_ws_client
+    environment:
+      - PRODUCT_ID=BTC-USD
+      - DATA_STORE=True
+      - USE_MOCKED_FEED=True  # Set this to True for mock feed
+      - MOCK_SERVER=mock_btc
+      - MOCK_PORT=8765
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    restart: always
+    networks:
+      - kahoot_network
+
+  eth_ws_client:
+    build:
+      context: ./app  # Main app folder
+    container_name: eth_ws_client
+    environment:
+      - PRODUCT_ID=ETH-USD
+      - DATA_STORE=True
+      - USE_MOCKED_FEED=True  # Set this to True for mock feed
+      - MOCK_SERVER=mock_eth      
+      - MOCK_PORT=8766
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    restart: always
+    networks:
+      - kahoot_network
+
+  ltc_ws_client:
+    build:
+      context: ./app  # Main app folder
+    container_name: ltc_ws_client
+    environment:
+      - PRODUCT_ID=LTC-USD
+      - DATA_STORE=True
+      - USE_MOCKED_FEED=True  # Set this to True for mock feed
+      - MOCK_SERVER=mock_ltc      
+      - MOCK_PORT=8767
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    restart: always
+    networks:
+      - kahoot_network    
+
+  # Mock service (for testing with mock data)
+  mock_btc:
+    build:
+      context: ./mock_app
+    container_name: mock_btc
+    environment:
+      - DATA_STORE=True    
+      - MOCK_PORT=8765
+      - PRODUCT_ID=BTC-USD
+      - L2UPDATE_COUNT=50
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./mock_logs:/mock_app/mock_logs
+      - ./mock_data:/mock_app/mock_data
+    restart: always
+    networks:
+      - kahoot_network
+
+  mock_eth:
+    build:
+      context: ./mock_app
+    container_name: mock_eth
+    environment:
+      - DATA_STORE=True    
+      - MOCK_PORT=8766
+      - PRODUCT_ID=ETH-USD
+      - L2UPDATE_COUNT=50
+    ports:
+      - "8766:8766"
+    volumes:
+      - ./mock_logs:/mock_app/mock_logs
+      - ./mock_data:/mock_app/mock_data
+    restart: always
+    networks:
+      - kahoot_network
+
+  mock_ltc:
+    build:
+      context: ./mock_app
+    container_name: mock_ltc
+    environment:
+      - DATA_STORE=True    
+      - MOCK_PORT=8767
+      - PRODUCT_ID=LTC-USD
+      - L2UPDATE_COUNT=50
+    ports:
+      - "8767:8767"
+    volumes:
+      - ./mock_logs:/mock_app/mock_logs
+      - ./mock_data:/mock_app/mock_data
+    restart: always
+    networks:
+      - kahoot_network
+
+networks:
+  kahoot_network:
+    driver: bridge
